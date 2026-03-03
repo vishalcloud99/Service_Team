@@ -1123,6 +1123,51 @@
       justify-content: center;
     }
 
+    .receipt-btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      justify-content: center;
+    }
+
+    .receipt-action-btn {
+      padding: 9px 18px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+      color: var(--text-primary);
+    }
+
+    .receipt-cam-btn:hover {
+      background: var(--blue-light);
+      border-color: var(--blue);
+    }
+
+    .receipt-file-btn:hover {
+      background: var(--green-light);
+      border-color: var(--green);
+    }
+
+    .receipt-pdf-badge {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 16px;
+      background: #fef3c7;
+      border: 1.5px solid #f59e0b;
+      border-radius: 10px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: #92400e;
+    }
+
     .expense-scorecard {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -1649,8 +1694,8 @@
             </div>
           </div>
           <div class="field-group">
-            <label class="field-label">Description *</label>
-            <textarea id="expDescription" placeholder="Enter details..." rows="2"></textarea>
+            <label class="field-label">Description</label>
+            <textarea id="expDescription" placeholder="Enter details (optional)..." rows="2"></textarea>
           </div>
           <div class="field-group">
             <label class="field-label">Amount (₹) *</label>
@@ -1666,14 +1711,25 @@
               <div class="section-subtitle">Optional — capture or upload</div>
             </div>
           </div>
-          <div class="receipt-upload-area" id="receiptUploadArea" onclick="triggerReceiptInput()">
-            <div class="receipt-upload-icon">📸</div>
-            <div class="receipt-upload-text"><strong>Tap to capture</strong> or upload receipt</div>
+          <div class="receipt-upload-area" id="receiptUploadArea">
+            <div class="receipt-upload-icon">🧾</div>
+            <div class="receipt-upload-text">Capture or upload a receipt</div>
+            <div class="receipt-btn-row">
+              <button type="button" class="receipt-action-btn receipt-cam-btn" onclick="triggerReceiptCamera()">
+                📷 Camera
+              </button>
+              <button type="button" class="receipt-action-btn receipt-file-btn" onclick="triggerReceiptFile()">
+                📁 Upload File
+              </button>
+            </div>
           </div>
-          <input type="file" id="receiptFileInput" accept="image/*" capture="environment" style="display:none"
+          <input type="file" id="receiptCameraInput" accept="image/*" capture="environment" style="display:none"
+            onchange="handleReceiptFile(event)">
+          <input type="file" id="receiptFileInput" accept="image/*,application/pdf" style="display:none"
             onchange="handleReceiptFile(event)">
           <div class="receipt-preview" id="receiptPreview">
             <img id="receiptThumb" src="">
+            <div class="receipt-pdf-badge" id="receiptPdfBadge" style="display:none">📄 PDF Attached</div>
             <button class="receipt-remove-btn" onclick="removeReceipt(event)">✕</button>
           </div>
         </div>
@@ -1687,6 +1743,9 @@
       <!-- ── SUB 2: History ── -->
       <div id="expense-history" class="expense-sub-content">
 
+        <div class="scorecard-period" id="scorecardPeriod"
+          style="text-align:center;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">
+          March 2026</div>
         <div class="expense-scorecard">
           <div class="score-card advance">
             <div class="score-num" id="scoreAdvance">₹0</div>
@@ -1753,7 +1812,7 @@
     // ═══════════════════════════════════════════════
     //  CONFIGURATION — Paste your deployed Apps Script Web App URL here
     // ═══════════════════════════════════════════════
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbysgtIksaK97OW6IRw6LZWEhncWfbQUBMcqjQEeZBAdJdyopkI8I98NT1VMhzRcNcl_/exec'; // e.g. 'https://script.google.com/macros/s/AKfycby.../exec'
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOIthXgk-Olj1GAmRkyEZ9zFMK3teH0L2qMG7PT4shZt5Hwd3NqFyGHij6scJgt9AT/exec'; // e.g. 'https://script.google.com/macros/s/AKfycby.../exec'
 
     // ═══════════════════════════════════════════════
     //  GLOBALS
@@ -1769,6 +1828,7 @@
     let allVisits = [];
     let batteryInfo = { level: null, charging: null };
     let clockInterval = null;
+    let publicIP = 'N/A';
 
     const DEMO_MODE = !SCRIPT_URL;
 
@@ -1788,6 +1848,7 @@
       loadEmpName();
       detectLocation();
       getBattery();
+      getPublicIP();
       checkNetwork();
       window.addEventListener('online', checkNetwork);
       window.addEventListener('offline', checkNetwork);
@@ -1965,6 +2026,23 @@
     }
 
     // ═══════════════════════════════════════════════
+    //  PUBLIC IP
+    // ═══════════════════════════════════════════════
+    async function getPublicIP() {
+      try {
+        const r = await fetch('https://api.ipify.org?format=json');
+        const j = await r.json();
+        if (j && j.ip) publicIP = j.ip;
+      } catch (_) {
+        try {
+          const r2 = await fetch('https://api64.ipify.org?format=json');
+          const j2 = await r2.json();
+          if (j2 && j2.ip) publicIP = j2.ip;
+        } catch (_) { }
+      }
+    }
+
+    // ═══════════════════════════════════════════════
     //  NETWORK
     // ═══════════════════════════════════════════════
     function checkNetwork() {
@@ -2123,6 +2201,7 @@
         siteName,
         numLabours,
         fingerprint: deviceFingerprint,
+        ip: publicIP,
         battery: batteryInfo.level !== null ? `${batteryInfo.level}%${batteryInfo.charging ? ' ⚡' : ''}` : 'N/A',
         locationName: locationData.address,
         lat: locationData.lat,
@@ -2485,28 +2564,52 @@
     }
 
     // ── Receipt Photo ──
-    function triggerReceiptInput() {
+    function triggerReceiptCamera() {
+      document.getElementById('receiptCameraInput').click();
+    }
+
+    function triggerReceiptFile() {
       document.getElementById('receiptFileInput').click();
     }
 
     function handleReceiptFile(e) {
       const file = e.target.files[0];
       if (!file) return;
-      compressImage(file, 1200, 0.75, (b64) => {
-        receiptBase64 = b64;
-        document.getElementById('receiptThumb').src = b64;
-        document.getElementById('receiptPreview').classList.add('visible');
-        document.getElementById('receiptUploadArea').classList.add('has-photo');
-      });
+
+      const isPdf = file.type === 'application/pdf';
+
+      if (isPdf) {
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+          receiptBase64 = ev.target.result;
+          document.getElementById('receiptThumb').style.display = 'none';
+          document.getElementById('receiptPdfBadge').style.display = 'flex';
+          document.getElementById('receiptPreview').classList.add('visible');
+          document.getElementById('receiptUploadArea').classList.add('has-photo');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        compressImage(file, 1200, 0.75, (b64) => {
+          receiptBase64 = b64;
+          document.getElementById('receiptThumb').src = b64;
+          document.getElementById('receiptThumb').style.display = 'block';
+          document.getElementById('receiptPdfBadge').style.display = 'none';
+          document.getElementById('receiptPreview').classList.add('visible');
+          document.getElementById('receiptUploadArea').classList.add('has-photo');
+        });
+      }
     }
 
     function removeReceipt(e) {
       e.stopPropagation();
       receiptBase64 = '';
       document.getElementById('receiptThumb').src = '';
+      document.getElementById('receiptThumb').style.display = 'block';
+      document.getElementById('receiptPdfBadge').style.display = 'none';
       document.getElementById('receiptPreview').classList.remove('visible');
       document.getElementById('receiptUploadArea').classList.remove('has-photo');
       document.getElementById('receiptFileInput').value = '';
+      document.getElementById('receiptCameraInput').value = '';
     }
 
     function compressImage(file, maxW, quality, cb) {
@@ -2550,7 +2653,6 @@
       if (!empName) { alert('Please enter your name.'); return; }
       if (!category) { alert('Please select a category.'); return; }
       if (!subCategory) { alert('Please select a sub category.'); return; }
-      if (!description) { alert('Please enter a description.'); return; }
       if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return; }
 
       localStorage.setItem('empName_' + deviceFingerprint, empName);
